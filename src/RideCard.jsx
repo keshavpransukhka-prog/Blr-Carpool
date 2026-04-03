@@ -40,7 +40,7 @@ function RideCard({ name, gender, time, destination, phone, requested, matched, 
             padding: '0.75rem',
             marginBottom: '0.75rem'
           }}>
-            <p style={{ fontSize: '0.78rem', color: '#92400e', lineHeight: '1.5', marginBottom: 0 }}>
+            <p style={{ fontSize: '0.78rem', color: '#92400e', lineHeight: '1.5', marginBottom: 0, textAlign: 'left' }}>
               🛡️ <strong>Safety tip:</strong> We recommend meeting your match in a public area at the airport and exchanging a valid photo ID before sharing the cab.
             </p>
           </div>
