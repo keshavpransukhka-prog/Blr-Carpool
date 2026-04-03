@@ -26,7 +26,7 @@ function RideForm({ onRidePosted }) {
   const [gender, setGender] = useState('Prefer not to say')
   const [genderPref, setGenderPref] = useState('No preference')
   const [locationPrefs, setLocationPrefs] = useState([])
-  const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState('')
 
   function toggleLocation(area) {
     setLocationPrefs(prev =>
@@ -39,31 +39,21 @@ function RideForm({ onRidePosted }) {
   async function handleSubmit(event) {
     event.preventDefault()
 
+    const cleanPhone = phone.replace(/\s/g, '')
+    if (!/^\d{10}$/.test(cleanPhone)) {
+      setError('Please enter a valid 10-digit phone number')
+      return
+    }
+
+    setError('')
+
     const docRef = await addDoc(collection(db, 'rides'), {
-      name, phone, time, destination, gender, genderPref,
+      name, phone: cleanPhone, time, destination, gender, genderPref,
       locationPrefs,
       createdAt: new Date().toISOString()
     })
 
-    onRidePosted({ id: docRef.id, name, phone, time, destination, gender, genderPref, locationPrefs })
-    setSubmitted(true)
-  }
-
-  if (submitted) {
-    return (
-      <div style={{
-        background: 'white',
-        padding: '1.5rem',
-        borderRadius: '16px',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-        marginBottom: '1.5rem',
-        textAlign: 'center'
-      }}>
-        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅</div>
-        <p style={{ fontWeight: '600', color: '#1a1a2e', fontSize: '1rem' }}>Your details have been collected!</p>
-        <p style={{ color: '#666', fontSize: '0.9rem', marginTop: '0.3rem' }}>We'll show you matches arriving within 1 hour of you.</p>
-      </div>
-    )
+    onRidePosted({ id: docRef.id, name, phone: cleanPhone, time, destination, gender, genderPref, locationPrefs })
   }
 
   return (
@@ -72,7 +62,27 @@ function RideForm({ onRidePosted }) {
       <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Priya" required />
 
       <label>Phone Number</label>
-      <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="e.g. 98765 43210" type="tel" required />
+      <input
+        value={phone}
+        onChange={e => {
+          setPhone(e.target.value)
+          setError('')
+        }}
+        placeholder="e.g. 9876543210"
+        type="tel"
+        required
+      />
+      {error && (
+        <p style={{
+          color: '#dc2626',
+          fontSize: '0.8rem',
+          marginTop: '0.3rem',
+          marginBottom: '0',
+          textAlign: 'left'
+        }}>
+          {error}
+        </p>
+      )}
 
       <label>Arrival Time</label>
       <input type="datetime-local" value={time} onChange={e => setTime(e.target.value)} required />
@@ -100,33 +110,13 @@ function RideForm({ onRidePosted }) {
       </select>
 
       <label>Location Preference (select all that work for you)</label>
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.5rem',
-        marginTop: '0.3rem',
-        maxHeight: '200px',
-        overflowY: 'auto',
-        padding: '0.75rem',
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        background: '#fafafa'
-      }}>
+      <div className="checkbox-list">
         {BANGALORE_AREAS.map(area => (
-          <label key={area} style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            fontWeight: '400',
-            fontSize: '0.9rem',
-            cursor: 'pointer',
-            marginTop: '0'
-          }}>
+          <label key={area}>
             <input
               type="checkbox"
               checked={locationPrefs.includes(area)}
               onChange={() => toggleLocation(area)}
-              style={{ width: 'auto', cursor: 'pointer' }}
             />
             {area}
           </label>
