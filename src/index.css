@@ -6,7 +6,7 @@
 }
 
 body {
-  background-color: #f0f4f8;
+  background-color: #f5f7fa;
   display: flex;
   justify-content: center;
   padding: 2rem 1rem;
@@ -14,63 +14,68 @@ body {
 
 #root {
   width: 100%;
-  max-width: 480px;
+  max-width: 460px;
 }
 
 h1 {
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   color: #1a1a2e;
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.25rem;
   text-align: center;
+  font-weight: 700;
 }
 
-p {
-  color: #666;
-  font-size: 0.95rem;
-  margin-bottom: 1.5rem;
+.subtitle {
+  color: #888;
+  font-size: 0.9rem;
   text-align: center;
+  margin-bottom: 1.75rem;
 }
 
-form {
+.card {
   background: white;
-  padding: 2rem;
+  padding: 1.5rem;
   border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  margin-bottom: 1rem;
 }
 
 label {
   display: block;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  color: #333;
+  color: #555;
   margin-bottom: 0.3rem;
   margin-top: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 input, select {
   width: 100%;
-  padding: 0.7rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid #e8eaed;
+  border-radius: 10px;
+  font-size: 0.95rem;
   outline: none;
-  background: white;
+  background: #fafafa;
   color: #1a1a2e;
   font-family: 'Segoe UI', sans-serif;
+  transition: border-color 0.2s;
 }
 
 input:focus, select:focus {
-  border-color: #4f46e5;
+  border-color: #5b6af0;
+  background: white;
 }
 
 .checkbox-list {
   width: 100%;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: white;
+  border: 1.5px solid #e8eaed;
+  border-radius: 10px;
+  background: #fafafa;
   overflow-y: auto;
-  max-height: 200px;
+  max-height: 180px;
 }
 
 .checkbox-list label {
@@ -79,11 +84,13 @@ input:focus, select:focus {
   gap: 0.75rem;
   padding: 0.6rem 1rem;
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 400;
-  color: #1a1a2e;
+  color: #333;
+  text-transform: none;
+  letter-spacing: 0;
   cursor: pointer;
-  border-bottom: 1px solid #f0f4f8;
+  border-bottom: 1px solid #f0f2f5;
 }
 
 .checkbox-list label:last-child {
@@ -95,24 +102,137 @@ input:focus, select:focus {
   height: 16px;
   padding: 0;
   border: none;
+  background: none;
   cursor: pointer;
-  accent-color: #4f46e5;
+  accent-color: #5b6af0;
 }
 
-button[type="submit"] {
+.btn-primary {
   margin-top: 1.5rem;
   width: 100%;
-  padding: 0.85rem;
-  background-color: #4f46e5;
+  padding: 0.9rem;
+  background: #5b6af0;
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Segoe UI', sans-serif;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #4a59e0;
+}
+
+.btn-secondary {
+  padding: 0.6rem 1.25rem;
+  background: #eef0fe;
+  color: #5b6af0;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Segoe UI', sans-serif;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #e0e3fd;
+}
+
+.btn-whatsapp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.6rem 1.25rem;
+  background: #25D366;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   font-family: 'Segoe UI', sans-serif;
 }
 
-button[type="submit"]:hover {
-  background-color: #4338ca;
+.btn-accept {
+  padding: 0.4rem 0.9rem;
+  background: #5b6af0;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.btn-request {
+  margin-top: 0.75rem;
+  padding: 0.55rem 1.1rem;
+  background: #5b6af0;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.btn-request:disabled {
+  background: #f0f2f5;
+  color: #aaa;
+  cursor: default;
+}
+
+.tag {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.tag-matched {
+  background: #e6f9f0;
+  color: #16a34a;
+}
+
+.tag-requested {
+  background: #f0f2f5;
+  color: #888;
+}
+
+.section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #888;
+  margin-bottom: 0.75rem;
+}
+
+.match-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.match-item:last-child {
+  border-bottom: none;
+}
+
+.error-text {
+  color: #e53e3e;
+  font-size: 0.8rem;
+  margin-top: 0.3rem;
+  text-transform: none;
+  letter-spacing: 0;
 }

@@ -38,93 +38,77 @@ function RideForm({ onRidePosted }) {
 
   async function handleSubmit(event) {
     event.preventDefault()
-
     const cleanPhone = phone.replace(/\s/g, '')
     if (!/^\d{10}$/.test(cleanPhone)) {
       setError('Please enter a valid 10-digit phone number')
       return
     }
-
     setError('')
-
     const docRef = await addDoc(collection(db, 'rides'), {
       name, phone: cleanPhone, time, destination, gender, genderPref,
-      locationPrefs,
-      createdAt: new Date().toISOString()
+      locationPrefs, createdAt: new Date().toISOString()
     })
-
     onRidePosted({ id: docRef.id, name, phone: cleanPhone, time, destination, gender, genderPref, locationPrefs })
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label>Your Name</label>
-      <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Priya" required />
+    <div className="card">
+      <form onSubmit={handleSubmit} style={{ all: 'unset', display: 'block' }}>
+        <label>Your Name</label>
+        <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Priya" required />
 
-      <label>Phone Number</label>
-      <input
-        value={phone}
-        onChange={e => {
-          setPhone(e.target.value)
-          setError('')
-        }}
-        placeholder="e.g. 9876543210"
-        type="tel"
-        required
-      />
-      {error && (
-        <p style={{
-          color: '#dc2626',
-          fontSize: '0.8rem',
-          marginTop: '0.3rem',
-          marginBottom: '0',
-          textAlign: 'left'
-        }}>
-          {error}
-        </p>
-      )}
+        <label>Phone Number</label>
+        <input
+          value={phone}
+          onChange={e => { setPhone(e.target.value); setError('') }}
+          placeholder="e.g. 9876543210"
+          type="tel"
+          required
+        />
+        {error && <p className="error-text">{error}</p>}
 
-      <label>Arrival Time</label>
-      <input type="datetime-local" value={time} onChange={e => setTime(e.target.value)} required />
+        <label>Arrival Time</label>
+        <input type="datetime-local" value={time} onChange={e => setTime(e.target.value)} required />
 
-      <label>Destination Area</label>
-      <select value={destination} onChange={e => setDestination(e.target.value)} required>
-        <option value="">Select your destination</option>
-        {BANGALORE_AREAS.map(area => (
-          <option key={area} value={area}>{area}</option>
-        ))}
-      </select>
+        <label>Destination Area</label>
+        <select value={destination} onChange={e => setDestination(e.target.value)} required>
+          <option value="">Select your destination</option>
+          {BANGALORE_AREAS.map(area => (
+            <option key={area} value={area}>{area}</option>
+          ))}
+        </select>
 
-      <label>Your Gender</label>
-      <select value={gender} onChange={e => setGender(e.target.value)}>
-        <option>Prefer not to say</option>
-        <option>Male</option>
-        <option>Female</option>
-      </select>
+        <label>Your Gender</label>
+        <select value={gender} onChange={e => setGender(e.target.value)}>
+          <option>Prefer not to say</option>
+          <option>Male</option>
+          <option>Female</option>
+        </select>
 
-      <label>Gender Preference for Carpool</label>
-      <select value={genderPref} onChange={e => setGenderPref(e.target.value)}>
-        <option>No preference</option>
-        <option>Male only</option>
-        <option>Female only</option>
-      </select>
+        <label>Gender Preference</label>
+        <select value={genderPref} onChange={e => setGenderPref(e.target.value)}>
+          <option>No preference</option>
+          <option>Male only</option>
+          <option>Female only</option>
+        </select>
 
-      <label>Location Preference (select all that work for you)</label>
-      <div className="checkbox-list">
-        {BANGALORE_AREAS.map(area => (
-          <label key={area}>
-            <input
-              type="checkbox"
-              checked={locationPrefs.includes(area)}
-              onChange={() => toggleLocation(area)}
-            />
-            {area}
-          </label>
-        ))}
-      </div>
+        <label>Location Preference</label>
+        <div className="checkbox-list">
+          {BANGALORE_AREAS.map(area => (
+            <label key={area}>
+              <input
+                type="checkbox"
+                checked={locationPrefs.includes(area)}
+                onChange={() => toggleLocation(area)}
+              />
+              {area}
+            </label>
+          ))}
+        </div>
 
-      <button type="submit">Find Carpool</button>
-    </form>
+        <button type="submit" className="btn-primary">Find Carpool</button>
+      </form>
+    </div>
   )
 }
 
