@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BLR Carpool — Share the ride home</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #0f0f14;
+      --soft: #f5f6fa;
+      --mid: #e8eaf2;
+      --accent: #5b6af0;
+      --accent-light: #eef0fe;
+      --green: #16a34a;
+      --green-light: #e6f9f0;
+      --amber: #92400e;
+      --amber-light: #fffbeb;
+      --muted: #888;
+      --white: #ffffff;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--white);
+      color: var(--ink);
+      overflow-x: hidden;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.1rem 2rem;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--mid);
+    }
+
+    .nav-logo {
+      font-family: 'Sora', sans-serif;
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: var(--ink);
+      text-decoration: none;
+    }
+
+    .nav-cta {
+      background: var(--accent);
+      color: white;
+      padding: 0.55rem 1.25rem;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      font-family: 'Sora', sans-serif;
+      transition: background 0.2s, transform 0.2s;
+    }
+
+    .nav-cta:hover { background: #4a59e0; transform: translateY(-1px); }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 7rem 1.5rem 4rem;
+      background: linear-gradient(160deg, #f5f6fa 0%, #eef0fe 50%, #f5f6fa 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 600px; height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(91,106,240,0.12) 0%, transparent 70%);
+      top: -100px; right: -150px;
+      pointer-events: none;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      width: 400px; height: 400px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(91,106,240,0.08) 0%, transparent 70%);
+      bottom: -50px; left: -100px;
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--accent-light);
+      color: var(--accent);
+      padding: 0.4rem 1rem;
+      border-radius: 100px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: 'Sora', sans-serif;
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .hero h1 {
+      font-family: 'Sora', sans-serif;
+      font-size: clamp(2.2rem, 6vw, 3.8rem);
+      font-weight: 800;
+      line-height: 1.1;
+      color: var(--ink);
+      margin-bottom: 1.25rem;
+      max-width: 700px;
+    }
+
+    .hero h1 span {
+      color: var(--accent);
+    }
+
+    .hero-sub {
+      font-size: clamp(1rem, 2.5vw, 1.15rem);
+      color: var(--muted);
+      max-width: 480px;
+      line-height: 1.7;
+      margin-bottom: 2.5rem;
+      font-weight: 300;
+    }
+
+    .hero-btns {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn-hero-primary {
+      background: var(--accent);
+      color: white;
+      padding: 0.85rem 2rem;
+      border-radius: 100px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      font-family: 'Sora', sans-serif;
+      transition: all 0.2s;
+      box-shadow: 0 4px 20px rgba(91,106,240,0.3);
+    }
+
+    .btn-hero-primary:hover {
+      background: #4a59e0;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(91,106,240,0.4);
+    }
+
+    .btn-hero-secondary {
+      background: white;
+      color: var(--ink);
+      padding: 0.85rem 2rem;
+      border-radius: 100px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      font-family: 'Sora', sans-serif;
+      border: 1.5px solid var(--mid);
+      transition: all 0.2s;
+    }
+
+    .btn-hero-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 2.5rem;
+      margin-top: 4rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-num {
+      font-family: 'Sora', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+    }
+
+    /* SECTIONS */
+    section {
+      padding: 5rem 1.5rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-family: 'Sora', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+
+    .section-title {
+      font-family: 'Sora', sans-serif;
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      font-weight: 800;
+      color: var(--ink);
+      line-height: 1.2;
+      margin-bottom: 1rem;
+    }
+
+    .section-sub {
+      font-size: 1rem;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 560px;
+      font-weight: 300;
+    }
+
+    /* WHAT IS CARPOOLING */
+    .explainer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.25rem;
+      margin-top: 2.5rem;
+    }
+
+    .explainer-card {
+      background: var(--soft);
+      border-radius: 16px;
+      padding: 1.5rem;
+      border: 1px solid var(--mid);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .explainer-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.07);
+    }
+
+    .explainer-icon {
+      font-size: 1.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .explainer-card h3 {
+      font-family: 'Sora', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 0.4rem;
+    }
+
+    .explainer-card p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* HOW IT WORKS */
+    .steps-bg {
+      background: var(--soft);
+      border-radius: 24px;
+      padding: 3rem 2rem;
+      margin-top: 2.5rem;
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .step {
+      display: flex;
+      gap: 1.25rem;
+      align-items: flex-start;
+      position: relative;
+      padding-bottom: 2rem;
+    }
+
+    .step:last-child {
+      padding-bottom: 0;
+    }
+
+    .step-left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .step-num {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      font-family: 'Sora', sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .step-line {
+      width: 2px;
+      flex: 1;
+      background: var(--mid);
+      margin-top: 0.5rem;
+      min-height: 30px;
+    }
+
+    .step:last-child .step-line {
+      display: none;
+    }
+
+    .step-content h3 {
+      font-family: 'Sora', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 0.3rem;
+      padding-top: 0.4rem;
+    }
+
+    .step-content p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* TIMING */
+    .timing-card {
+      background: var(--accent-light);
+      border: 1.5px solid #c7cdf9;
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-top: 1.5rem;
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+
+    .timing-icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .timing-card h3 {
+      font-family: 'Sora', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    .timing-card p {
+      font-size: 0.88rem;
+      color: #4a59e0;
+      line-height: 1.6;
+    }
+
+    /* NOTIFICATIONS */
+    .notif-card {
+      background: var(--green-light);
+      border: 1.5px solid #bbf7d0;
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-top: 1.5rem;
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+
+    .notif-card h3 {
+      font-family: 'Sora', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--green);
+      margin-bottom: 0.4rem;
+    }
+
+    .notif-card p {
+      font-size: 0.88rem;
+      color: #166534;
+      line-height: 1.6;
+    }
+
+    /* AFTER MATCH */
+    .after-match-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    .after-card {
+      background: white;
+      border: 1.5px solid var(--mid);
+      border-radius: 14px;
+      padding: 1.25rem;
+      text-align: center;
+      transition: transform 0.2s;
+    }
+
+    .after-card:hover { transform: translateY(-2px); }
+
+    .after-card .icon { font-size: 1.75rem; margin-bottom: 0.6rem; }
+
+    .after-card h3 {
+      font-family: 'Sora', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 0.3rem;
+    }
+
+    .after-card p {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* SAFETY */
+    .safety-section {
+      background: var(--amber-light);
+      border-radius: 24px;
+      padding: 2.5rem 2rem;
+      border: 1.5px solid #fde68a;
+    }
+
+    .safety-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .safety-item {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+
+    .safety-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--amber);
+      margin-top: 0.4rem;
+      flex-shrink: 0;
+    }
+
+    .safety-item p {
+      font-size: 0.88rem;
+      color: var(--amber);
+      line-height: 1.5;
+    }
+
+    .safety-item strong {
+      display: block;
+      font-family: 'Sora', sans-serif;
+      font-weight: 700;
+      margin-bottom: 0.15rem;
+      color: #78350f;
+    }
+
+    /* FAQ */
+    .faq-list {
+      margin-top: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .faq-item {
+      border: 1.5px solid var(--mid);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .faq-q {
+      width: 100%;
+      background: white;
+      border: none;
+      padding: 1rem 1.25rem;
+      text-align: left;
+      font-family: 'Sora', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--ink);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.2s;
+    }
+
+    .faq-q:hover { background: var(--soft); }
+
+    .faq-q .arrow {
+      font-size: 0.75rem;
+      transition: transform 0.3s;
+      color: var(--muted);
+    }
+
+    .faq-q.open .arrow { transform: rotate(180deg); }
+
+    .faq-a {
+      display: none;
+      padding: 0 1.25rem 1rem;
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.6;
+      background: white;
+    }
+
+    .faq-a.open { display: block; }
+
+    /* CTA FOOTER */
+    .cta-section {
+      background: var(--ink);
+      color: white;
+      text-align: center;
+      padding: 5rem 1.5rem;
+    }
+
+    .cta-section h2 {
+      font-family: 'Sora', sans-serif;
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      font-weight: 800;
+      margin-bottom: 1rem;
+    }
+
+    .cta-section p {
+      color: #aaa;
+      font-size: 1rem;
+      margin-bottom: 2rem;
+      font-weight: 300;
+    }
+
+    .btn-cta {
+      background: var(--accent);
+      color: white;
+      padding: 0.9rem 2.5rem;
+      border-radius: 100px;
+      font-size: 1rem;
+      font-weight: 600;
+      text-decoration: none;
+      font-family: 'Sora', sans-serif;
+      display: inline-block;
+      transition: all 0.2s;
+      box-shadow: 0 4px 20px rgba(91,106,240,0.4);
+    }
+
+    .btn-cta:hover {
+      background: #4a59e0;
+      transform: translateY(-2px);
+    }
+
+    footer {
+      background: var(--ink);
+      border-top: 1px solid #222;
+      padding: 1.5rem;
+      text-align: center;
+      color: #555;
+      font-size: 0.8rem;
+    }
+
+    /* ANIMATIONS */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 600px) {
+      nav { padding: 1rem 1.25rem; }
+      .hero-stats { gap: 1.5rem; }
+      .steps-bg { padding: 2rem 1.25rem; }
+      .safety-section { padding: 2rem 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="#" class="nav-logo">✈️ BLR Carpool</a>
+    <a href="https://blr-carpool.vercel.app" class="nav-cta">Find a Carpool →</a>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-badge">✈️ Bangalore Airport</div>
+    <h1>Share the ride.<br><span>Split the cost.</span></h1>
+    <p class="hero-sub">BLR Carpool connects you with fellow passengers landing at Kempegowda International Airport heading the same way — so you never have to pay full cab fare alone.</p>
+    <div class="hero-btns">
+      <a href="https://blr-carpool.vercel.app" class="btn-hero-primary">Find a Carpool →</a>
+      <a href="#how-it-works" class="btn-hero-secondary">How it works</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-num">₹0</div>
+        <div class="stat-label">Cost to use</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">±1hr</div>
+        <div class="stat-label">Match window</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">50%</div>
+        <div class="stat-label">Avg. savings</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHAT IS CARPOOLING -->
+  <section id="what-is-carpooling" class="fade-in">
+    <p class="section-label">The basics</p>
+    <h2 class="section-title">What is carpooling?</h2>
+    <p class="section-sub">Carpooling means sharing a cab with strangers going the same direction — splitting the cost equally. A cab from BLR to Indiranagar costs ₹800–1200. Split two ways, that's ₹400–600 each.</p>
+    <div class="explainer-grid">
+      <div class="explainer-card">
+        <div class="explainer-icon">💸</div>
+        <h3>Save money</h3>
+        <p>Split the fare equally with your co-passenger. The more people, the cheaper it gets.</p>
+      </div>
+      <div class="explainer-card">
+        <div class="explainer-icon">🌱</div>
+        <h3>Better for everyone</h3>
+        <p>Fewer cabs on the road means less traffic and a smaller carbon footprint.</p>
+      </div>
+      <div class="explainer-card">
+        <div class="explainer-icon">🤝</div>
+        <h3>Meet fellow travellers</h3>
+        <p>Most BLR arrivals are professionals and frequent flyers — good company for the ride.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how-it-works" class="fade-in">
+    <p class="section-label">Step by step</p>
+    <h2 class="section-title">How does BLR Carpool work?</h2>
+    <p class="section-sub">The whole process takes under 2 minutes. Here's exactly what happens.</p>
+    <div class="steps-bg">
+      <div class="steps">
+        <div class="step">
+          <div class="step-left">
+            <div class="step-num">1</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <h3>Fill in your details</h3>
+            <p>Enter your name, phone number, arrival time, and destination area. Your phone number is kept private until you match.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-left">
+            <div class="step-num">2</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <h3>See who's arriving near you</h3>
+            <p>We show you other passengers arriving within 1 hour of you, going to the same part of the city.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-left">
+            <div class="step-num">3</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <h3>Send a carpool request</h3>
+            <p>Tap "Request Carpool" on someone you'd like to share with. They'll see your request on their screen.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-left">
+            <div class="step-num">4</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <h3>Wait for them to accept</h3>
+            <p>If they also request you back, it's a mutual match. You'll both get a browser notification instantly.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-left">
+            <div class="step-num">5</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <h3>Connect on WhatsApp</h3>
+            <p>Once matched, both phone numbers are revealed and a WhatsApp button appears to message them directly.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BEST TIME -->
+  <section id="timing" class="fade-in">
+    <p class="section-label">Timing</p>
+    <h2 class="section-title">When should you fill this?</h2>
+    <p class="section-sub">BLR Carpool works best when used at the right moment. Here's our recommendation.</p>
+    <div class="timing-card">
+      <div class="timing-icon">🛬</div>
+      <div>
+        <h3>Best time: Right after you land</h3>
+        <p>Open the app as soon as your flight touches down — while waiting for your bags at the carousel. This gives you 10–15 minutes to find a match before heading to the cab queue.</p>
+      </div>
+    </div>
+    <div class="timing-card" style="margin-top: 1rem;">
+      <div class="timing-icon">📅</div>
+      <div>
+        <h3>Can I fill it before landing?</h3>
+        <p>Yes! You can enter your scheduled arrival time in advance. We'll match you with others arriving within 1 hour of that time. Just make sure to check back after landing for any new matches.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- NOTIFICATIONS -->
+  <section id="notifications" class="fade-in">
+    <p class="section-label">Notifications</p>
+    <h2 class="section-title">How will I know when I'm matched?</h2>
+    <p class="section-sub">You don't need to keep staring at the screen. Here's how we notify you.</p>
+    <div class="notif-card">
+      <div style="font-size: 1.5rem; flex-shrink: 0;">🔔</div>
+      <div>
+        <h3>Browser notification</h3>
+        <p>When you submit your details, we ask permission to send you notifications. The moment someone matches with you, a notification pops up on your phone — even if the app is in the background.</p>
+      </div>
+    </div>
+    <div class="notif-card" style="margin-top: 1rem;">
+      <div style="font-size: 1.5rem; flex-shrink: 0;">💬</div>
+      <div>
+        <h3>WhatsApp button appears</h3>
+        <p>When you open the app after a match, a green "Message on WhatsApp" button appears on your match's card. Tap it to instantly start a conversation with a pre-filled message.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- AFTER MATCH -->
+  <section id="after-match" class="fade-in">
+    <p class="section-label">After matching</p>
+    <h2 class="section-title">What do I do after matching?</h2>
+    <p class="section-sub">Once you've matched, here's the recommended flow to actually share the cab.</p>
+    <div class="after-match-steps">
+      <div class="after-card">
+        <div class="icon">💬</div>
+        <h3>Message on WhatsApp</h3>
+        <p>Tap the green button to send a pre-filled message introducing yourself.</p>
+      </div>
+      <div class="after-card">
+        <div class="icon">📍</div>
+        <h3>Agree on a meeting point</h3>
+        <p>Pick a clear spot — the Arrivals exit, a specific gate, or the prepaid taxi counter.</p>
+      </div>
+      <div class="after-card">
+        <div class="icon">🪪</div>
+        <h3>Exchange IDs</h3>
+        <p>Show each other a photo ID to confirm you're the right person before getting in.</p>
+      </div>
+      <div class="after-card">
+        <div class="icon">🚕</div>
+        <h3>Book the cab together</h3>
+        <p>Use Uber, Ola, or the prepaid taxi counter. Split the fare equally at the end.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SAFETY -->
+  <section id="safety" class="fade-in">
+    <p class="section-label">Safety first</p>
+    <h2 class="section-title">How to stay safe</h2>
+    <p class="section-sub">We take safety seriously. Here are our recommendations before sharing a cab with someone you just met.</p>
+    <div class="safety-section">
+      <div class="safety-grid">
+        <div class="safety-item">
+          <div class="safety-dot"></div>
+          <p><strong>Meet in public</strong>Always meet your match in the public Arrivals area, not in a secluded spot.</p>
+        </div>
+        <div class="safety-item">
+          <div class="safety-dot"></div>
+          <p><strong>Check their ID</strong>Ask to see an Aadhar card, passport, or driver's licence before sharing.</p>
+        </div>
+        <div class="safety-item">
+          <div class="safety-dot"></div>
+          <p><strong>Share your location</strong>Drop a live location to a trusted contact before getting in the cab.</p>
+        </div>
+        <div class="safety-item">
+          <div class="safety-dot"></div>
+          <p><strong>Trust your instincts</strong>If something feels off, it's completely fine to decline and book separately.</p>
+        </div>
+        <div class="safety-item">
+          <div class="safety-dot"></div>
+          <p><strong>Use official cabs only</strong>Only use Uber, Ola, or the airport's official prepaid taxi counter.</p>
+        </div>
+        <div class="safety-item">
+          <div class="safety-dot"></div>
+          <p><strong>Agree on fare upfront</strong>Confirm how you'll split the fare before the ride starts to avoid confusion.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="fade-in">
+    <p class="section-label">FAQ</p>
+    <h2 class="section-title">Common questions</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Is BLR Carpool free to use? <span class="arrow">▼</span>
+        </button>
+        <div class="faq-a">Yes, completely free. We don't charge anything. We're just connecting passengers — you split the cab fare directly with your co-passenger.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Is my phone number visible to everyone? <span class="arrow">▼</span>
+        </button>
+        <div class="faq-a">No. Your phone number is only revealed when there is a mutual match — meaning both you and the other person have requested each other. It's never shown publicly.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          What if my flight is delayed? <span class="arrow">▼</span>
+        </button>
+        <div class="faq-a">Update your arrival time after landing. We match based on the time you enter, so entering your actual landing time gives you the most accurate matches.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Can I request multiple people? <span class="arrow">▼</span>
+        </button>
+        <div class="faq-a">Yes! You can send requests to multiple people at the same time. Whichever one matches you back first is your carpool partner.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How long does my listing stay up? <span class="arrow">▼</span>
+        </button>
+        <div class="faq-a">Your listing is automatically hidden after 24 hours. This keeps the app clean and ensures only relevant, recent arrivals are shown.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          What if I can't find a match? <span class="arrow">▼</span>
+        </button>
+        <div class="faq-a">Tap "Expand Search" to widen the match window to ±3 hours and remove destination filters. This increases your chances of finding someone going a similar direction.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <div class="cta-section">
+    <h2>Ready to save on your next cab?</h2>
+    <p>Takes less than 2 minutes. Free forever.</p>
+    <a href="https://blr-carpool.vercel.app" class="btn-cta">Find a Carpool →</a>
+  </div>
+
+  <footer>
+    Built with ❤️ for BLR travellers · Free to use · Your data is deleted after 24 hours
+  </footer>
+
+  <script>
+    // FAQ toggle
+    function toggleFaq(btn) {
+      const answer = btn.nextElementSibling
+      const isOpen = answer.classList.contains('open')
+      document.querySelectorAll('.faq-a').forEach(a => a.classList.remove('open'))
+      document.querySelectorAll('.faq-q').forEach(q => q.classList.remove('open'))
+      if (!isOpen) {
+        answer.classList.add('open')
+        btn.classList.add('open')
+      }
+    }
+
+    // Scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible')
+        }
+      })
+    }, { threshold: 0.1 })
+
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el))
+  </script>
+
+</body>
+</html>
