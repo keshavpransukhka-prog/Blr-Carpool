@@ -1,0 +1,78 @@
+import { useState } from 'react'
+import { auth } from './firebase'
+import { sendSignInLinkToEmail } from 'firebase/auth'
+
+const actionCodeSettings = {
+  url: 'https://blr-carpool.vercel.app',
+  handleCodeInApp: true,
+}
+
+function Login({ onLogin }) {
+  const [email, setEmail] = useState('')
+  const [sent, setSent] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    try {
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings)
+      window.localStorage.setItem('emailForSignIn', email)
+      setSent(true)
+    } catch (err) {
+      setError('Something went wrong. Please try again.')
+    }
+    setLoading(false)
+  }
+
+  if (sent) {
+    return (
+      <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
+        <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📧</div>
+        <p style={{ fontWeight: '700', color: '#1a1a2e', fontSize: '1rem', marginBottom: '0.5rem' }}>
+          Check your email!
+        </p>
+        <p style={{ color: '#888', fontSize: '0.88rem', lineHeight: '1.6' }}>
+          We sent a magic link to <strong>{email}</strong>. Click it to sign in — no password needed.
+        </p>
+        <p style={{ color: '#aaa', fontSize: '0.8rem', marginTop: '1rem' }}>
+          Didn't get it? Check your spam folder.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="card">
+      <p style={{ fontWeight: '700', color: '#1a1a2e', fontSize: '1rem', marginBottom: '0.25rem' }}>
+        Sign in to continue
+      </p>
+      <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+        We'll send a magic link to your email — no password needed.
+      </p>
+      <form onSubmit={handleSubmit} style={{ all: 'unset', display: 'block' }}>
+        <label>Email Address</label>
+        <input
+          type="email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          placeholder="e.g. priya@gmail.com"
+          required
+        />
+        {error && <p className="error-text">{error}</p>}
+        <button
+          type="submit"
+          className="btn-primary"
+          disabled={loading}
+          style={{ opacity: loading ? 0.7 : 1 }}
+        >
+          {loading ? 'Sending...' : 'Send Magic Link →'}
+        </button>
+      </form>
+    </div>
+  )
+}
+
+export default Login

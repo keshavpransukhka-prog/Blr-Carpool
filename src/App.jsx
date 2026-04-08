@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import { db } from './firebase'
-import { collection, onSnapshot, addDoc } from 'firebase/firestore'
+import { db, auth } from './firebase'
+import { collection, onSnapshot, addDoc, query, where, getDocs } from 'firebase/firestore'
+import { isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut } from 'firebase/auth'
 import RideCard from './RideCard'
 import RideForm from './RideForm'
+import Login from './Login'
 
 function App() {
   const [rides, setRides] = useState([])
@@ -10,19 +12,50 @@ function App() {
   const [requests, setRequests] = useState([])
   const [matchedIds, setMatchedIds] = useState([])
   const [expandedSearch, setExpandedSearch] = useState(false)
+  const [user, setUser] = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
 
-  function requestNotificationPermission() {
-    if ('Notification' in window) Notification.requestPermission()
-  }
-
-  function sendNotification(name) {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('🎉 Carpool Match Found!', {
-        body: `You matched with ${name}! Open the app to see their number.`,
-        icon: '/vite.svg'
-      })
+  // Handle magic link sign in
+  useEffect(() => {
+    if (isSignInWithEmailLink(auth, window.location.href)) {
+      let email = window.localStorage.getItem('emailForSignIn')
+      if (!email) {
+        email = window.prompt('Please provide your email for confirmation')
+      }
+      signInWithEmailLink(auth, email, window.location.href)
+        .then(() => {
+          window.localStorage.removeItem('emailForSignIn')
+          window.history.replaceState(null, '', '/')
+        })
+        .catch(err => console.error(err))
     }
-  }
+  }, [])
+
+  // Listen for auth state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser)
+      setAuthLoading(false)
+
+      if (firebaseUser) {
+        // Check if user already has a ride posted
+        const q = query(collection(db, 'rides'), where('userId', '==', firebaseUser.uid))
+        const snapshot = await getDocs(q)
+        if (!snapshot.empty) {
+          const doc = snapshot.docs[0]
+          const ride = { id: doc.id, ...doc.data() }
+          // Only restore if within 24 hours
+          const ageHours = (new Date() - new Date(ride.createdAt)) / (1000 * 60 * 60)
+          if (ageHours <= 24) {
+            setMyRide(ride)
+          }
+        }
+      } else {
+        setMyRide(null)
+      }
+    })
+    return unsubscribe
+  }, [])
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'rides'), function(snapshot) {
@@ -50,6 +83,19 @@ function App() {
       }
     })
   }, [requests, myRide])
+
+  function requestNotificationPermission() {
+    if ('Notification' in window) Notification.requestPermission()
+  }
+
+  function sendNotification(name) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('🎉 Carpool Match Found!', {
+        body: `You matched with ${name}! Open the app to see their number.`,
+        icon: '/vite.svg'
+      })
+    }
+  }
 
   async function handleRequest(toRide) {
     if (!myRide) return
@@ -81,7 +127,6 @@ function App() {
   }
 
   const now = new Date()
-
   const requestsToMe = myRide ? requests.filter(r => r.toId === myRide.id) : []
   const mySentRequests = myRide ? requests.filter(r => r.fromId === myRide.id) : []
 
@@ -105,12 +150,20 @@ function App() {
     return true
   })
 
-  if (!myRide) {
+  if (authLoading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '4rem', color: '#888' }}>
+        <p>Loading...</p>
+      </div>
+    )
+  }
+
+  if (!user) {
     return (
       <div>
         <h1>✈️ BLR Carpool</h1>
         <p className="subtitle">Share a cab from Bangalore Airport</p>
-        <RideForm onRidePosted={handleRidePosted} />
+        <Login />
       </div>
     )
   }
@@ -120,26 +173,46 @@ function App() {
       <h1>✈️ BLR Carpool</h1>
       <p className="subtitle">Share a cab from Bangalore Airport</p>
 
-      {/* Confirmation */}
-      <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <div style={{
-          width: '36px', height: '36px', borderRadius: '50%',
-          background: '#e6f9f0', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', fontSize: '1rem', flexShrink: 0
-        }}>✅</div>
-        <div>
-          <p style={{ fontWeight: '700', color: '#1a1a2e', fontSize: '0.95rem', marginBottom: '0.1rem' }}>
-            You're listed!
-          </p>
-          <p style={{ color: '#888', fontSize: '0.82rem', marginBottom: 0 }}>
-            {myRide.name} · {myRide.destination}
-          </p>
-        </div>
+      {/* Top bar */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+        <button
+          onClick={() => signOut(auth)}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#888',
+            fontSize: '0.8rem',
+            cursor: 'pointer',
+            fontFamily: 'Segoe UI, sans-serif'
+          }}
+        >
+          Sign out
+        </button>
       </div>
+
+      {/* Confirmation or Form */}
+      {!myRide && <RideForm onRidePosted={handleRidePosted} userId={user.uid} />}
+      {myRide && (
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{
+            width: '36px', height: '36px', borderRadius: '50%',
+            background: '#e6f9f0', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', fontSize: '1rem', flexShrink: 0
+          }}>✅</div>
+          <div>
+            <p style={{ fontWeight: '700', color: '#1a1a2e', fontSize: '0.95rem', marginBottom: '0.1rem' }}>
+              You're listed!
+            </p>
+            <p style={{ color: '#888', fontSize: '0.82rem', marginBottom: 0 }}>
+              {myRide.name} · {myRide.destination}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Requests sent */}
       {mySentRequests.length > 0 && (
-        <div className="card">
+        <div className="card" style={{ marginTop: '1rem' }}>
           <p className="section-title">📤 Requests Sent</p>
           {mySentRequests.map(r => (
             <div key={r.id} className="match-item">
@@ -155,7 +228,7 @@ function App() {
 
       {/* Requests received */}
       {requestsToMe.length > 0 && (
-        <div className="card">
+        <div className="card" style={{ marginTop: '1rem' }}>
           <p className="section-title">📥 Requests Received</p>
           {requestsToMe.map(r => {
             const theirRide = rides.find(ride => ride.id === r.fromId)
@@ -186,7 +259,7 @@ function App() {
       )}
 
       {/* Available matches */}
-      <div style={{ marginTop: '0.5rem' }}>
+      <div style={{ marginTop: '1rem' }}>
         {filteredRides.length === 0 ? (
           <div className="card" style={{ textAlign: 'center' }}>
             <p style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '1rem' }}>
