@@ -21,7 +21,6 @@ const BANGALORE_AREAS = [
 function RideForm({ onRidePosted, userId }) {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
-  const [time, setTime] = useState('')
   const [destination, setDestination] = useState('')
   const [gender, setGender] = useState('Prefer not to say')
   const [genderPref, setGenderPref] = useState('No preference')
@@ -44,6 +43,9 @@ function RideForm({ onRidePosted, userId }) {
       return
     }
     setError('')
+
+    const time = new Date().toISOString()
+
     const docRef = await addDoc(collection(db, 'rides'), {
       userId,
       name, phone: cleanPhone, time, destination, gender, genderPref,
@@ -67,9 +69,6 @@ function RideForm({ onRidePosted, userId }) {
           required
         />
         {error && <p className="error-text">{error}</p>}
-
-        <label>Arrival Time</label>
-        <input type="datetime-local" value={time} onChange={e => setTime(e.target.value)} required />
 
         <label>Destination Area</label>
         <select value={destination} onChange={e => setDestination(e.target.value)} required>
