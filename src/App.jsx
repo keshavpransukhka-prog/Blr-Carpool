@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { db, auth } from './firebase'
-import { collection, onSnapshot, addDoc, query, where, getDocs } from 'firebase/firestore'
+import { collection, onSnapshot, addDoc, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore'
 import { isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut } from 'firebase/auth'
 import RideCard from './RideCard'
 import RideForm from './RideForm'
@@ -15,7 +15,6 @@ function App() {
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
 
-  // Handle magic link sign in
   useEffect(() => {
     if (isSignInWithEmailLink(auth, window.location.href)) {
       let email = window.localStorage.getItem('emailForSignIn')
@@ -31,22 +30,18 @@ function App() {
     }
   }, [])
 
-  // Listen for auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser)
       setAuthLoading(false)
-
       if (firebaseUser) {
         const q = query(collection(db, 'rides'), where('userId', '==', firebaseUser.uid))
         const snapshot = await getDocs(q)
         if (!snapshot.empty) {
-          const doc = snapshot.docs[0]
-          const ride = { id: doc.id, ...doc.data() }
+          const docSnap = snapshot.docs[0]
+          const ride = { id: docSnap.id, ...docSnap.data() }
           const ageHours = (new Date() - new Date(ride.createdAt)) / (1000 * 60 * 60)
-          if (ageHours <= 24) {
-            setMyRide(ride)
-          }
+          if (ageHours <= 24) setMyRide(ride)
         }
       } else {
         setMyRide(null)
@@ -98,18 +93,31 @@ function App() {
   async function handleRequest(toRide) {
     if (!myRide) return
     await addDoc(collection(db, 'requests'), {
-      fromId: myRide.id,
-      fromName: myRide.name,
-      fromPhone: myRide.phone,
-      toId: toRide.id,
-      toName: toRide.name,
-      toPhone: toRide.phone,
+      fromId: myRide.id, fromName: myRide.name, fromPhone: myRide.phone,
+      toId: toRide.id, toName: toRide.name, toPhone: toRide.phone,
     })
+  }
+
+  async function handleCancelListing() {
+    if (!myRide) return
+    if (!window.confirm('Cancel your listing? You\'ll need to repost if you want to find a carpool.')) return
+    await deleteDoc(doc(db, 'rides', myRide.id))
+    setMyRide(null)
   }
 
   function handleRidePosted(ride) {
     setMyRide(ride)
     requestNotificationPermission()
+  }
+
+  function handleShare() {
+    const text = `I'm using BLR Carpool to find someone to share a cab with from Bangalore Airport! Join me: https://blr-carpool.vercel.app`
+    if (navigator.share) {
+      navigator.share({ title: 'BLR Carpool', text, url: 'https://blr-carpool.vercel.app' })
+    } else {
+      const url = `https://wa.me/?text=${encodeURIComponent(text)}`
+      window.open(url, '_blank')
+    }
   }
 
   function isMatched(toRide) {
@@ -125,25 +133,32 @@ function App() {
   }
 
   const now = new Date()
+
+  // Active users in last 1 hour
+  const activeUsers = rides.filter(ride => {
+    if (!ride.createdAt) return false
+    const ageMinutes = (now - new Date(ride.createdAt)) / (1000 * 60)
+    return ageMinutes <= 60
+  }).length
+
   const requestsToMe = myRide ? requests.filter(r => r.toId === myRide.id) : []
   const mySentRequests = myRide ? requests.filter(r => r.fromId === myRide.id) : []
 
+  // Fixed time window — match based on when each person posted
   const filteredRides = rides.filter(function(ride) {
     if (!myRide) return false
     if (ride.id === myRide.id) return false
-    const rideTime = new Date(ride.time)
-    const diffMinutes = Math.abs(rideTime - now) / (1000 * 60)
-    if (!expandedSearch && diffMinutes > 60) return false
-    if (expandedSearch && diffMinutes > 180) return false
-    if (!ride.createdAt) return true
+    if (!ride.createdAt) return false
     const ageHours = (now - new Date(ride.createdAt)) / (1000 * 60 * 60)
     if (ageHours > 24) return false
+    const myPostedTime = new Date(myRide.createdAt)
+    const theirPostedTime = new Date(ride.createdAt)
+    const diffMinutes = Math.abs(myPostedTime - theirPostedTime) / (1000 * 60)
+    if (!expandedSearch && diffMinutes > 60) return false
+    if (expandedSearch && diffMinutes > 180) return false
     if (!expandedSearch) {
       if (myRide.genderPref === 'Male only' && ride.gender !== 'Male') return false
       if (myRide.genderPref === 'Female only' && ride.gender !== 'Female') return false
-      if (myRide.locationPrefs && myRide.locationPrefs.length > 0) {
-        if (!myRide.locationPrefs.includes(ride.destination)) return false
-      }
     }
     return true
   })
@@ -161,6 +176,17 @@ function App() {
       <div>
         <h1>✈️ BLR Carpool</h1>
         <p className="subtitle">Share a cab from Bangalore Airport</p>
+        {activeUsers > 0 && (
+          <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+            <span style={{
+              background: '#e6f9f0', color: '#16a34a',
+              padding: '0.35rem 0.85rem', borderRadius: '100px',
+              fontSize: '0.8rem', fontWeight: 600
+            }}>
+              🟢 {activeUsers} {activeUsers === 1 ? 'person' : 'people'} looking right now
+            </span>
+          </div>
+        )}
         <Login />
       </div>
     )
@@ -171,35 +197,61 @@ function App() {
       <h1>✈️ BLR Carpool</h1>
       <p className="subtitle">Share a cab from Bangalore Airport</p>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-        <button
-          onClick={() => signOut(auth)}
-          style={{
-            background: 'none', border: 'none',
-            color: '#888', fontSize: '0.8rem',
-            cursor: 'pointer', fontFamily: 'Segoe UI, sans-serif'
-          }}
-        >
-          Sign out
-        </button>
+      {/* Top bar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        {activeUsers > 0 && (
+          <span style={{
+            background: '#e6f9f0', color: '#16a34a',
+            padding: '0.35rem 0.85rem', borderRadius: '100px',
+            fontSize: '0.8rem', fontWeight: 600
+          }}>
+            🟢 {activeUsers} looking now
+          </span>
+        )}
+        <div style={{ display: 'flex', gap: '0.75rem', marginLeft: 'auto' }}>
+          <button onClick={handleShare} style={{
+            background: 'none', border: 'none', color: '#5b6af0',
+            fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+            fontFamily: 'Segoe UI, sans-serif'
+          }}>
+            📤 Share
+          </button>
+          <button onClick={() => signOut(auth)} style={{
+            background: 'none', border: 'none', color: '#888',
+            fontSize: '0.8rem', cursor: 'pointer',
+            fontFamily: 'Segoe UI, sans-serif'
+          }}>
+            Sign out
+          </button>
+        </div>
       </div>
 
       {!myRide && <RideForm onRidePosted={handleRidePosted} userId={user.uid} />}
+
       {myRide && (
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{
-            width: '36px', height: '36px', borderRadius: '50%',
-            background: '#e6f9f0', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', fontSize: '1rem', flexShrink: 0
-          }}>✅</div>
-          <div>
-            <p style={{ fontWeight: '700', color: '#1a1a2e', fontSize: '0.95rem', marginBottom: '0.1rem' }}>
-              You're listed!
-            </p>
-            <p style={{ color: '#888', fontSize: '0.82rem', marginBottom: 0 }}>
-              {myRide.name} · {myRide.destination}
-            </p>
+        <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{
+              width: '36px', height: '36px', borderRadius: '50%',
+              background: '#e6f9f0', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', fontSize: '1rem', flexShrink: 0
+            }}>✅</div>
+            <div>
+              <p style={{ fontWeight: '700', color: '#1a1a2e', fontSize: '0.95rem', marginBottom: '0.1rem' }}>
+                You're listed!
+              </p>
+              <p style={{ color: '#888', fontSize: '0.82rem', marginBottom: 0 }}>
+                {myRide.name} · {myRide.destination}
+              </p>
+            </div>
           </div>
+          <button onClick={handleCancelListing} style={{
+            background: 'none', border: 'none', color: '#e53e3e',
+            fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600,
+            fontFamily: 'Segoe UI, sans-serif', flexShrink: 0
+          }}>
+            Cancel
+          </button>
         </div>
       )}
 
@@ -223,7 +275,7 @@ function App() {
           <p className="section-title">📥 Requests Received</p>
           {requestsToMe.map(r => {
             const theirRide = rides.find(ride => ride.id === r.fromId)
-            const alreadyRequested = requests.some(req => req.fromId === myRide.id && req.toId === r.fromId)
+            const alreadyRequested = requests.some(req => req.fromId === myRide?.id && req.toId === r.fromId)
             const matched = isMatched({ id: r.fromId })
             return (
               <div key={r.id} className="match-item">

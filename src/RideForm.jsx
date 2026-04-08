@@ -3,19 +3,19 @@ import { db } from './firebase'
 import { collection, addDoc } from 'firebase/firestore'
 
 const BANGALORE_AREAS = [
-  'Indiranagar / Jeevan Bima Nagar / Kadubeesanahalli / Marathahalli',
-  'Koramangala / BTM Layout / HSR Layout',
-  'Whitefield / ITPL / Brookefield',
-  'Electronic City / Bommanahalli',
-  'Jayanagar / JP Nagar / Banashankari',
-  'MG Road / Shivajinagar / Ulsoor',
-  'Hebbal / Thanisandra / Bellary Road',
-  'Yeshwanthpur / Rajajinagar / Malleswaram',
-  'Sarjapur Road / Bellandur / Haralur',
-  'Bannerghatta Road / Arekere',
-  'Kengeri / Mysore Road',
-  'RT Nagar / Nagawara / HBR Layout',
-  'Other'
+  { label: 'Indiranagar / Marathahalli', value: 'Indiranagar / Jeevan Bima Nagar / Kadubeesanahalli / Marathahalli' },
+  { label: 'Koramangala / BTM / HSR', value: 'Koramangala / BTM Layout / HSR Layout' },
+  { label: 'Whitefield / ITPL', value: 'Whitefield / ITPL / Brookefield' },
+  { label: 'Electronic City', value: 'Electronic City / Bommanahalli' },
+  { label: 'Jayanagar / JP Nagar', value: 'Jayanagar / JP Nagar / Banashankari' },
+  { label: 'MG Road / Shivajinagar', value: 'MG Road / Shivajinagar / Ulsoor' },
+  { label: 'Hebbal / Thanisandra', value: 'Hebbal / Thanisandra / Bellary Road' },
+  { label: 'Yeshwanthpur / Malleswaram', value: 'Yeshwanthpur / Rajajinagar / Malleswaram' },
+  { label: 'Sarjapur / Bellandur', value: 'Sarjapur Road / Bellandur / Haralur' },
+  { label: 'Bannerghatta Road', value: 'Bannerghatta Road / Arekere' },
+  { label: 'Kengeri / Mysore Road', value: 'Kengeri / Mysore Road' },
+  { label: 'RT Nagar / HBR Layout', value: 'RT Nagar / Nagawara / HBR Layout' },
+  { label: 'Other', value: 'Other' }
 ]
 
 function RideForm({ onRidePosted, userId }) {
@@ -24,16 +24,9 @@ function RideForm({ onRidePosted, userId }) {
   const [destination, setDestination] = useState('')
   const [gender, setGender] = useState('Prefer not to say')
   const [genderPref, setGenderPref] = useState('No preference')
-  const [locationPrefs, setLocationPrefs] = useState([])
   const [error, setError] = useState('')
-
-  function toggleLocation(area) {
-    setLocationPrefs(prev =>
-      prev.includes(area)
-        ? prev.filter(a => a !== area)
-        : [...prev, area]
-    )
-  }
+  const [loading, setLoading] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -43,15 +36,16 @@ function RideForm({ onRidePosted, userId }) {
       return
     }
     setError('')
+    setLoading(true)
 
     const time = new Date().toISOString()
 
     const docRef = await addDoc(collection(db, 'rides'), {
-      userId,
-      name, phone: cleanPhone, time, destination, gender, genderPref,
-      locationPrefs, createdAt: new Date().toISOString()
+      userId, name, phone: cleanPhone, time, destination, gender, genderPref,
+      createdAt: new Date().toISOString()
     })
-    onRidePosted({ id: docRef.id, userId, name, phone: cleanPhone, time, destination, gender, genderPref, locationPrefs })
+    onRidePosted({ id: docRef.id, userId, name, phone: cleanPhone, time, destination, gender, genderPref })
+    setLoading(false)
   }
 
   return (
@@ -74,39 +68,49 @@ function RideForm({ onRidePosted, userId }) {
         <select value={destination} onChange={e => setDestination(e.target.value)} required>
           <option value="">Select your destination</option>
           {BANGALORE_AREAS.map(area => (
-            <option key={area} value={area}>{area}</option>
+            <option key={area.value} value={area.value}>{area.label}</option>
           ))}
         </select>
 
-        <label>Your Gender</label>
-        <select value={gender} onChange={e => setGender(e.target.value)}>
-          <option>Prefer not to say</option>
-          <option>Male</option>
-          <option>Female</option>
-        </select>
+        {/* Optional filters toggle */}
+        <button
+          type="button"
+          onClick={() => setShowFilters(!showFilters)}
+          style={{
+            marginTop: '1rem', background: 'none', border: 'none',
+            color: '#5b6af0', fontSize: '0.85rem', fontWeight: 600,
+            cursor: 'pointer', padding: 0, fontFamily: 'Segoe UI, sans-serif'
+          }}
+        >
+          {showFilters ? '▲ Hide filters' : '▼ Add filters (optional)'}
+        </button>
 
-        <label>Gender Preference</label>
-        <select value={genderPref} onChange={e => setGenderPref(e.target.value)}>
-          <option>No preference</option>
-          <option>Male only</option>
-          <option>Female only</option>
-        </select>
+        {showFilters && (
+          <>
+            <label style={{ marginTop: '1rem' }}>Your Gender</label>
+            <select value={gender} onChange={e => setGender(e.target.value)}>
+              <option>Prefer not to say</option>
+              <option>Male</option>
+              <option>Female</option>
+            </select>
 
-        <label>Location Preference</label>
-        <div className="checkbox-list">
-          {BANGALORE_AREAS.map(area => (
-            <label key={area}>
-              <input
-                type="checkbox"
-                checked={locationPrefs.includes(area)}
-                onChange={() => toggleLocation(area)}
-              />
-              {area}
-            </label>
-          ))}
-        </div>
+            <label>Gender Preference</label>
+            <select value={genderPref} onChange={e => setGenderPref(e.target.value)}>
+              <option>No preference</option>
+              <option>Male only</option>
+              <option>Female only</option>
+            </select>
+          </>
+        )}
 
-        <button type="submit" className="btn-primary">Find Carpool</button>
+        <button
+          type="submit"
+          className="btn-primary"
+          disabled={loading}
+          style={{ opacity: loading ? 0.7 : 1 }}
+        >
+          {loading ? 'Finding matches...' : 'Find Carpool'}
+        </button>
       </form>
     </div>
   )
