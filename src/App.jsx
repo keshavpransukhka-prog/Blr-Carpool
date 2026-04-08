@@ -123,13 +123,14 @@ function App() {
     }
   }
 
-  async function handleRequest(toRide) {
-    if (!myRide) return
-    await addDoc(collection(db, 'requests'), {
-      fromId: myRide.id, fromName: myRide.name, fromPhone: myRide.phone,
-      toId: toRide.id, toName: toRide.name, toPhone: toRide.phone,
-    })
-  }
+ async function handleRequest(toRide) {
+  if (!myRide) return
+  if (!window.confirm(`Send a carpool request to ${toRide.name}?`)) return
+  await addDoc(collection(db, 'requests'), {
+    fromId: myRide.id, fromName: myRide.name, fromPhone: myRide.phone,
+    toId: toRide.id, toName: toRide.name, toPhone: toRide.phone,
+  })
+}
 
   async function handleCancelListing() {
     if (!myRide) return
@@ -345,21 +346,25 @@ function App() {
       )}
 
       <div style={{ marginTop: '1rem' }}>
-        {filteredRides.length === 0 ? (
-          <div className="card" style={{ textAlign: 'center' }}>
-            <p style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '1rem' }}>
-              No matches found near your arrival time
-            </p>
-            {!expandedSearch && (
-              <button className="btn-secondary" onClick={() => setExpandedSearch(true)}>
-                🔍 Expand Search
-              </button>
-            )}
-            {expandedSearch && (
-              <p style={{ color: '#5b6af0', fontSize: '0.85rem' }}>Showing ±3 hours, all areas</p>
-            )}
-          </div>
-        ) : (
+       {filteredRides.length === 0 ? (
+  <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
+    <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🔍</div>
+    <p style={{ fontWeight: '700', color: '#1a1a2e', fontSize: '0.95rem', marginBottom: '0.4rem' }}>
+      No matches yet
+    </p>
+    <p style={{ color: '#aaa', fontSize: '0.85rem', marginBottom: '1.25rem', lineHeight: 1.6 }}>
+      Nobody else has posted a ride in the last hour going your way. Try expanding your search or check back in a few minutes.
+    </p>
+    {!expandedSearch && (
+      <button className="btn-secondary" onClick={() => setExpandedSearch(true)}>
+        🔍 Expand Search
+      </button>
+    )}
+    {expandedSearch && (
+      <p style={{ color: '#5b6af0', fontSize: '0.85rem' }}>Showing ±3 hours, all areas</p>
+    )}
+  </div>
+) : (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
               <p style={{ fontWeight: '700', fontSize: '0.85rem', color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>

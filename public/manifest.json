@@ -1,0 +1,16 @@
+{
+  "name": "BLR Carpool",
+  "short_name": "BLR Carpool",
+  "description": "Share a cab from Bangalore Airport",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f6fa",
+  "theme_color": "#5b6af0",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
