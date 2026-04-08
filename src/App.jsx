@@ -374,16 +374,17 @@ function App() {
               const requested = iRequested(ride)
               return (
                 <RideCard
-                  key={ride.id}
-                  name={ride.name}
-                  gender={ride.gender}
-                  time={ride.time}
-                  destination={ride.destination}
-                  phone={matched ? ride.phone : null}
-                  requested={requested}
-                  matched={matched}
-                  onRequest={() => handleRequest(ride)}
-                />
+  key={ride.id}
+  name={ride.name}
+  gender={ride.gender}
+  time={ride.time}
+  destination={ride.destination}
+  phone={matched ? ride.phone : null}
+  requested={requested}
+  matched={matched}
+  onRequest={() => handleRequest(ride)}
+  myRideId={myRide?.id}
+/>
               )
             })}
           </>

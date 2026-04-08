@@ -1,12 +1,27 @@
-function RideCard({ name, gender, time, destination, phone, requested, matched, onRequest }) {
+import { useState } from 'react'
+import { db } from './firebase'
+import { addDoc, collection } from 'firebase/firestore'
+
+function RideCard({ name, gender, time, destination, phone, requested, matched, onRequest, myRideId }) {
   const date = new Date(time)
   const timeStr = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
   const dateStr = date.toLocaleDateString('en-IN', { month: 'long', day: 'numeric' })
+  const [feedback, setFeedback] = useState(null)
 
   function openWhatsApp() {
     const message = `Hi ${name}! We matched on BLR Carpool ✈️ I'm also heading to ${destination} around the same time. Want to share a cab?`
     const url = `https://wa.me/91${phone}?text=${encodeURIComponent(message)}`
     window.open(url, '_blank')
+  }
+
+  async function handleFeedback(didCarpool) {
+    setFeedback(didCarpool)
+    await addDoc(collection(db, 'feedback'), {
+      myRideId,
+      matchedName: name,
+      didCarpool,
+      createdAt: new Date().toISOString()
+    })
   }
 
   return (
@@ -34,19 +49,51 @@ function RideCard({ name, gender, time, destination, phone, requested, matched, 
             🎉 It's a match! Phone: {phone}
           </p>
           <div style={{
-            background: '#fffbeb',
-            border: '1px solid #fde68a',
-            borderRadius: '8px',
-            padding: '0.75rem',
-            marginBottom: '0.75rem'
+            background: '#fffbeb', border: '1px solid #fde68a',
+            borderRadius: '8px', padding: '0.75rem', marginBottom: '0.75rem'
           }}>
             <p style={{ fontSize: '0.78rem', color: '#92400e', lineHeight: '1.5', marginBottom: 0, textAlign: 'left' }}>
-              🛡️ <strong>Safety tip:</strong> We recommend meeting your match in a public area at the airport and exchanging a valid photo ID before sharing the cab.
+              🛡️ <strong>Safety tip:</strong> Meet in a public area at the airport and exchange a valid photo ID before sharing the cab.
             </p>
           </div>
           <button className="btn-whatsapp" onClick={openWhatsApp}>
             💬 Message on WhatsApp
           </button>
+
+          {/* Feedback */}
+          <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid #f0f2f5' }}>
+            {feedback === null ? (
+              <>
+                <p style={{ fontSize: '0.8rem', color: '#888', marginBottom: '0.5rem' }}>
+                  Did you successfully carpool with {name}?
+                </p>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    onClick={() => handleFeedback(true)}
+                    style={{
+                      padding: '0.4rem 1rem', borderRadius: '8px',
+                      border: '1.5px solid #16a34a', background: 'white',
+                      color: '#16a34a', fontSize: '0.85rem', fontWeight: 600,
+                      cursor: 'pointer', fontFamily: 'Segoe UI, sans-serif'
+                    }}
+                  >👍 Yes!</button>
+                  <button
+                    onClick={() => handleFeedback(false)}
+                    style={{
+                      padding: '0.4rem 1rem', borderRadius: '8px',
+                      border: '1.5px solid #ddd', background: 'white',
+                      color: '#888', fontSize: '0.85rem', fontWeight: 600,
+                      cursor: 'pointer', fontFamily: 'Segoe UI, sans-serif'
+                    }}
+                  >👎 No</button>
+                </div>
+              </>
+            ) : (
+              <p style={{ fontSize: '0.82rem', color: '#16a34a', fontWeight: '600' }}>
+                {feedback ? '🎉 Awesome! Thanks for using BLR Carpool!' : '😔 Sorry it didn\'t work out. Try expanding your search!'}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
