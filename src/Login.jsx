@@ -1,17 +1,26 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { auth } from './firebase'
-import { sendSignInLinkToEmail } from 'firebase/auth'
+import { sendSignInLinkToEmail, onAuthStateChanged } from 'firebase/auth'
 
 const actionCodeSettings = {
-  url: 'https://blr-carpool.vercel.app',
+  url: 'https://blr-carpool.vercel.app/app',
   handleCodeInApp: true,
 }
 
-function Login({ onLogin }) {
+function Login() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.location.href = '/app'
+      }
+    })
+    return unsubscribe
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()

@@ -25,7 +25,7 @@ function App() {
       signInWithEmailLink(auth, email, window.location.href)
         .then(() => {
           window.localStorage.removeItem('emailForSignIn')
-          window.history.replaceState(null, '', '/')
+          window.location.href = '/app'
         })
         .catch(err => console.error(err))
     }
@@ -38,13 +38,11 @@ function App() {
       setAuthLoading(false)
 
       if (firebaseUser) {
-        // Check if user already has a ride posted
         const q = query(collection(db, 'rides'), where('userId', '==', firebaseUser.uid))
         const snapshot = await getDocs(q)
         if (!snapshot.empty) {
           const doc = snapshot.docs[0]
           const ride = { id: doc.id, ...doc.data() }
-          // Only restore if within 24 hours
           const ageHours = (new Date() - new Date(ride.createdAt)) / (1000 * 60 * 60)
           if (ageHours <= 24) {
             setMyRide(ride)
@@ -173,24 +171,19 @@ function App() {
       <h1>✈️ BLR Carpool</h1>
       <p className="subtitle">Share a cab from Bangalore Airport</p>
 
-      {/* Top bar */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
         <button
           onClick={() => signOut(auth)}
           style={{
-            background: 'none',
-            border: 'none',
-            color: '#888',
-            fontSize: '0.8rem',
-            cursor: 'pointer',
-            fontFamily: 'Segoe UI, sans-serif'
+            background: 'none', border: 'none',
+            color: '#888', fontSize: '0.8rem',
+            cursor: 'pointer', fontFamily: 'Segoe UI, sans-serif'
           }}
         >
           Sign out
         </button>
       </div>
 
-      {/* Confirmation or Form */}
       {!myRide && <RideForm onRidePosted={handleRidePosted} userId={user.uid} />}
       {myRide && (
         <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -210,7 +203,6 @@ function App() {
         </div>
       )}
 
-      {/* Requests sent */}
       {mySentRequests.length > 0 && (
         <div className="card" style={{ marginTop: '1rem' }}>
           <p className="section-title">📤 Requests Sent</p>
@@ -226,7 +218,6 @@ function App() {
         </div>
       )}
 
-      {/* Requests received */}
       {requestsToMe.length > 0 && (
         <div className="card" style={{ marginTop: '1rem' }}>
           <p className="section-title">📥 Requests Received</p>
@@ -245,9 +236,7 @@ function App() {
                   )}
                 </div>
                 {!matched && !alreadyRequested && theirRide && (
-                  <button className="btn-accept" onClick={() => handleRequest(theirRide)}>
-                    Accept
-                  </button>
+                  <button className="btn-accept" onClick={() => handleRequest(theirRide)}>Accept</button>
                 )}
                 {!matched && alreadyRequested && (
                   <span className="tag tag-requested">Sent ✓</span>
@@ -258,7 +247,6 @@ function App() {
         </div>
       )}
 
-      {/* Available matches */}
       <div style={{ marginTop: '1rem' }}>
         {filteredRides.length === 0 ? (
           <div className="card" style={{ textAlign: 'center' }}>
