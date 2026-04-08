@@ -31,10 +31,10 @@ function RideForm({ onRidePosted, userId }) {
   async function handleSubmit(event) {
     event.preventDefault()
     const cleanPhone = phone.replace(/\s/g, '')
-    if (!/^\d{10}$/.test(cleanPhone)) {
-      setError('Please enter a valid 10-digit phone number')
-      return
-    }
+if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+  setError('Please enter a valid Indian mobile number starting with 6, 7, 8, or 9')
+  return
+}
     setError('')
     setLoading(true)
 
@@ -109,7 +109,7 @@ function RideForm({ onRidePosted, userId }) {
           disabled={loading}
           style={{ opacity: loading ? 0.7 : 1 }}
         >
-          {loading ? 'Finding matches...' : 'Find Carpool'}
+         {loading ? 'Posting your ride...' : '🛬 I Just Landed — Find Me a Carpool'}
         </button>
       </form>
     </div>

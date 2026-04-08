@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { db, auth } from './firebase'
-import { collection, onSnapshot, addDoc, query, where, getDocs, deleteDoc, doc, setDoc } from 'firebase/firestore'
+import { collection, onSnapshot, addDoc, query, where, getDocs, deleteDoc, doc, setDoc, updateDoc } from 'firebase/firestore'
 import { isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut } from 'firebase/auth'
 import RideCard from './RideCard'
 import RideForm from './RideForm'
@@ -15,16 +15,16 @@ function App() {
   const [expandedSearch, setExpandedSearch] = useState(false)
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [isFirstVisit, setIsFirstVisit] = useState(false)
 
   useEffect(() => {
     if (isSignInWithEmailLink(auth, window.location.href)) {
       let email = window.localStorage.getItem('emailForSignIn')
-      if (!email) {
-        email = window.prompt('Please provide your email for confirmation')
-      }
+      if (!email) email = window.prompt('Please provide your email for confirmation')
       signInWithEmailLink(auth, email, window.location.href)
         .then(() => {
           window.localStorage.removeItem('emailForSignIn')
+          setIsFirstVisit(true)
           window.location.href = '/app'
         })
         .catch(err => console.error(err))
@@ -36,7 +36,6 @@ function App() {
       setUser(firebaseUser)
       setAuthLoading(false)
       if (firebaseUser) {
-        // Restore ride
         const rideQ = query(collection(db, 'rides'), where('userId', '==', firebaseUser.uid))
         const rideSnap = await getDocs(rideQ)
         if (!rideSnap.empty) {
@@ -45,13 +44,9 @@ function App() {
           const ageHours = (new Date() - new Date(ride.createdAt)) / (1000 * 60 * 60)
           if (ageHours <= 24) setMyRide(ride)
         }
-
-        // Restore saved matches
         const matchQ = query(collection(db, 'matches'), where('userId', '==', firebaseUser.uid))
         const matchSnap = await getDocs(matchQ)
-        if (!matchSnap.empty) {
-          setSavedMatches(matchSnap.docs.map(d => d.data()))
-        }
+        if (!matchSnap.empty) setSavedMatches(matchSnap.docs.map(d => d.data()))
       } else {
         setMyRide(null)
         setSavedMatches([])
@@ -74,7 +69,6 @@ function App() {
     return unsubscribe
   }, [])
 
-  // Detect new matches and save them
   useEffect(() => {
     if (!myRide || requests.length === 0 || !user) return
     requests.forEach(async function(r) {
@@ -83,8 +77,6 @@ function App() {
         if (iSentToThem && !matchedIds.includes(r.fromId)) {
           setMatchedIds(prev => [...prev, r.fromId])
           sendNotification(r.fromName)
-
-          // Save match to Firebase
           const matchId = `${user.uid}_${r.fromId}`
           await setDoc(doc(db, 'matches', matchId), {
             userId: user.uid,
@@ -93,7 +85,6 @@ function App() {
             matchedPhone: r.fromPhone,
             matchedAt: new Date().toISOString()
           })
-
           setSavedMatches(prev => {
             const exists = prev.some(m => m.matchedRideId === r.fromId)
             if (exists) return prev
@@ -123,14 +114,14 @@ function App() {
     }
   }
 
- async function handleRequest(toRide) {
-  if (!myRide) return
-  if (!window.confirm(`Send a carpool request to ${toRide.name}?`)) return
-  await addDoc(collection(db, 'requests'), {
-    fromId: myRide.id, fromName: myRide.name, fromPhone: myRide.phone,
-    toId: toRide.id, toName: toRide.name, toPhone: toRide.phone,
-  })
-}
+  async function handleRequest(toRide) {
+    if (!myRide) return
+    if (!window.confirm(`Send a carpool request to ${toRide.name}?`)) return
+    await addDoc(collection(db, 'requests'), {
+      fromId: myRide.id, fromName: myRide.name, fromPhone: myRide.phone,
+      toId: toRide.id, toName: toRide.name, toPhone: toRide.phone,
+    })
+  }
 
   async function handleCancelListing() {
     if (!myRide) return
@@ -139,19 +130,32 @@ function App() {
     setMyRide(null)
   }
 
+  async function handleRideSorted() {
+    if (!myRide) return
+    await updateDoc(doc(db, 'rides', myRide.id), { sorted: true })
+    await deleteDoc(doc(db, 'rides', myRide.id))
+    setMyRide(null)
+    alert('Great! Your listing has been removed. Have a safe journey! 🚕')
+  }
+
   function handleRidePosted(ride) {
     setMyRide(ride)
     requestNotificationPermission()
   }
 
   function handleShare() {
-    const text = `I'm using BLR Carpool to find someone to share a cab with from Bangalore Airport! Join me: https://blr-carpool.vercel.app`
+    const text = `I'm using BLR Carpool to find someone to share a cab from Bangalore Airport! Join me: https://blr-carpool.vercel.app`
     if (navigator.share) {
       navigator.share({ title: 'BLR Carpool', text, url: 'https://blr-carpool.vercel.app' })
     } else {
-      const url = `https://wa.me/?text=${encodeURIComponent(text)}`
-      window.open(url, '_blank')
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
     }
+  }
+
+  function handleReport(name) {
+    const subject = encodeURIComponent(`Report: ${name} on BLR Carpool`)
+    const body = encodeURIComponent(`I want to report a user named "${name}" on BLR Carpool.\n\nReason:\n`)
+    window.open(`mailto:report@blrcarpool.com?subject=${subject}&body=${body}`)
   }
 
   function isMatched(toRide) {
@@ -170,12 +174,14 @@ function App() {
 
   const activeUsers = rides.filter(ride => {
     if (!ride.createdAt) return false
-    const ageMinutes = (now - new Date(ride.createdAt)) / (1000 * 60)
-    return ageMinutes <= 60
+    return (now - new Date(ride.createdAt)) / (1000 * 60) <= 60
   }).length
 
   const requestsToMe = myRide ? requests.filter(r => r.toId === myRide.id) : []
   const mySentRequests = myRide ? requests.filter(r => r.fromId === myRide.id) : []
+
+  // Only show unmatched requests received
+  const unmatchedRequestsToMe = requestsToMe.filter(r => !isMatched({ id: r.fromId }))
 
   const filteredRides = rides.filter(function(ride) {
     if (!myRide) return false
@@ -214,9 +220,7 @@ function App() {
               background: '#e6f9f0', color: '#16a34a',
               padding: '0.35rem 0.85rem', borderRadius: '100px',
               fontSize: '0.8rem', fontWeight: 600
-            }}>
-              🟢 {activeUsers} {activeUsers === 1 ? 'person' : 'people'} looking right now
-            </span>
+            }}>🟢 {activeUsers} {activeUsers === 1 ? 'person' : 'people'} looking right now</span>
           </div>
         )}
         <Login />
@@ -235,9 +239,7 @@ function App() {
             background: '#e6f9f0', color: '#16a34a',
             padding: '0.35rem 0.85rem', borderRadius: '100px',
             fontSize: '0.8rem', fontWeight: 600
-          }}>
-            🟢 {activeUsers} looking now
-          </span>
+          }}>🟢 {activeUsers} looking now</span>
         )}
         <div style={{ display: 'flex', gap: '0.75rem', marginLeft: 'auto' }}>
           <button onClick={handleShare} style={{
@@ -253,30 +255,51 @@ function App() {
         </div>
       </div>
 
-      {!myRide && <RideForm onRidePosted={handleRidePosted} userId={user.uid} />}
-
-      {myRide && (
-        <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{
-              width: '36px', height: '36px', borderRadius: '50%',
-              background: '#e6f9f0', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', fontSize: '1rem', flexShrink: 0
-            }}>✅</div>
-            <div>
-              <p style={{ fontWeight: '700', color: '#1a1a2e', fontSize: '0.95rem', marginBottom: '0.1rem' }}>You're listed!</p>
-              <p style={{ color: '#888', fontSize: '0.82rem', marginBottom: 0 }}>{myRide.name} · {myRide.destination}</p>
-            </div>
-          </div>
-          <button onClick={handleCancelListing} style={{
-            background: 'none', border: 'none', color: '#e53e3e',
-            fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600,
-            fontFamily: 'Segoe UI, sans-serif'
-          }}>Cancel</button>
+      {/* Welcome message for first visit */}
+      {isFirstVisit && !myRide && (
+        <div className="card" style={{ background: '#eef0fe', border: '1.5px solid #c7cdf9', marginBottom: '1rem' }}>
+          <p style={{ fontWeight: '700', color: '#4a59e0', marginBottom: '0.3rem' }}>👋 Welcome to BLR Carpool!</p>
+          <p style={{ fontSize: '0.85rem', color: '#4a59e0', lineHeight: 1.6 }}>
+            Fill in your details below and we'll match you with other passengers heading the same way. Takes 30 seconds!
+          </p>
         </div>
       )}
 
-      {/* Saved match history */}
+      {!myRide && <RideForm onRidePosted={handleRidePosted} userId={user.uid} />}
+
+      {myRide && (
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{
+                width: '36px', height: '36px', borderRadius: '50%',
+                background: '#e6f9f0', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', fontSize: '1rem', flexShrink: 0
+              }}>✅</div>
+              <div>
+                <p style={{ fontWeight: '700', color: '#1a1a2e', fontSize: '0.95rem', marginBottom: '0.1rem' }}>You're listed!</p>
+                <p style={{ color: '#888', fontSize: '0.82rem', marginBottom: 0 }}>{myRide.name} · {myRide.destination}</p>
+              </div>
+            </div>
+            <button onClick={handleCancelListing} style={{
+              background: 'none', border: 'none', color: '#e53e3e',
+              fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600,
+              fontFamily: 'Segoe UI, sans-serif'
+            }}>Cancel</button>
+          </div>
+          <button onClick={handleRideSorted} style={{
+            marginTop: '0.75rem', width: '100%',
+            padding: '0.6rem', background: '#f0f2f5',
+            border: 'none', borderRadius: '8px',
+            color: '#555', fontSize: '0.85rem', fontWeight: 600,
+            cursor: 'pointer', fontFamily: 'Segoe UI, sans-serif'
+          }}>
+            ✅ I've sorted my ride — remove my listing
+          </button>
+        </div>
+      )}
+
+      {/* Saved matches */}
       {savedMatches.length > 0 && (
         <div className="card" style={{ marginTop: '1rem', background: '#e6f9f0', border: '1.5px solid #bbf7d0' }}>
           <p className="section-title" style={{ color: '#16a34a' }}>🎉 Your Matches</p>
@@ -293,14 +316,13 @@ function App() {
                 }}
                 className="btn-whatsapp"
                 style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}
-              >
-                💬 WhatsApp
-              </button>
+              >💬 WhatsApp</button>
             </div>
           ))}
         </div>
       )}
 
+      {/* Requests sent */}
       {mySentRequests.length > 0 && (
         <div className="card" style={{ marginTop: '1rem' }}>
           <p className="section-title">📤 Requests Sent</p>
@@ -316,55 +338,43 @@ function App() {
         </div>
       )}
 
-      {requestsToMe.length > 0 && (
+      {/* Only unmatched requests received */}
+      {unmatchedRequestsToMe.length > 0 && (
         <div className="card" style={{ marginTop: '1rem' }}>
           <p className="section-title">📥 Requests Received</p>
-          {requestsToMe.map(r => {
+          {unmatchedRequestsToMe.map(r => {
             const theirRide = rides.find(ride => ride.id === r.fromId)
             const alreadyRequested = requests.some(req => req.fromId === myRide?.id && req.toId === r.fromId)
-            const matched = isMatched({ id: r.fromId })
             return (
               <div key={r.id} className="match-item">
-                <div>
-                  <p style={{ fontSize: '0.9rem', color: '#333', fontWeight: '600' }}>{r.fromName}</p>
-                  {matched && (
-                    <p style={{ fontSize: '0.82rem', color: '#16a34a', fontWeight: '600' }}>
-                      🎉 Matched! {r.fromPhone}
-                    </p>
-                  )}
-                </div>
-                {!matched && !alreadyRequested && theirRide && (
+                <p style={{ fontSize: '0.9rem', color: '#333', fontWeight: '600' }}>{r.fromName}</p>
+                {!alreadyRequested && theirRide && (
                   <button className="btn-accept" onClick={() => handleRequest(theirRide)}>Accept</button>
                 )}
-                {!matched && alreadyRequested && (
-                  <span className="tag tag-requested">Sent ✓</span>
-                )}
+                {alreadyRequested && <span className="tag tag-requested">Sent ✓</span>}
               </div>
             )
           })}
         </div>
       )}
 
+      {/* Available matches */}
       <div style={{ marginTop: '1rem' }}>
-       {filteredRides.length === 0 ? (
-  <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
-    <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🔍</div>
-    <p style={{ fontWeight: '700', color: '#1a1a2e', fontSize: '0.95rem', marginBottom: '0.4rem' }}>
-      No matches yet
-    </p>
-    <p style={{ color: '#aaa', fontSize: '0.85rem', marginBottom: '1.25rem', lineHeight: 1.6 }}>
-      Nobody else has posted a ride in the last hour going your way. Try expanding your search or check back in a few minutes.
-    </p>
-    {!expandedSearch && (
-      <button className="btn-secondary" onClick={() => setExpandedSearch(true)}>
-        🔍 Expand Search
-      </button>
-    )}
-    {expandedSearch && (
-      <p style={{ color: '#5b6af0', fontSize: '0.85rem' }}>Showing ±3 hours, all areas</p>
-    )}
-  </div>
-) : (
+        {filteredRides.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🔍</div>
+            <p style={{ fontWeight: '700', color: '#1a1a2e', fontSize: '0.95rem', marginBottom: '0.4rem' }}>No matches yet</p>
+            <p style={{ color: '#aaa', fontSize: '0.85rem', marginBottom: '1.25rem', lineHeight: 1.6 }}>
+              Nobody else has posted a ride in the last hour going your way. Try expanding your search or check back in a few minutes.
+            </p>
+            {!expandedSearch && (
+              <button className="btn-secondary" onClick={() => setExpandedSearch(true)}>🔍 Expand Search</button>
+            )}
+            {expandedSearch && (
+              <p style={{ color: '#5b6af0', fontSize: '0.85rem' }}>Showing ±3 hours, all areas</p>
+            )}
+          </div>
+        ) : (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
               <p style={{ fontWeight: '700', fontSize: '0.85rem', color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -379,17 +389,20 @@ function App() {
               const requested = iRequested(ride)
               return (
                 <RideCard
-  key={ride.id}
-  name={ride.name}
-  gender={ride.gender}
-  time={ride.time}
-  destination={ride.destination}
-  phone={matched ? ride.phone : null}
-  requested={requested}
-  matched={matched}
-  onRequest={() => handleRequest(ride)}
-  myRideId={myRide?.id}
-/>
+                  key={ride.id}
+                  name={ride.name}
+                  gender={ride.gender}
+                  time={ride.time}
+                  destination={ride.destination}
+                  phone={matched ? ride.phone : null}
+                  requested={requested}
+                  matched={matched}
+                  onRequest={() => handleRequest(ride)}
+                  myRideId={myRide?.id}
+                  createdAt={ride.createdAt}
+                  myGenderPref={myRide?.genderPref || 'No preference'}
+                  onReport={() => handleReport(ride.name)}
+                />
               )
             })}
           </>
