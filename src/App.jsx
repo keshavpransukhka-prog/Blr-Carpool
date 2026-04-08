@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { db, auth } from './firebase'
-import { collection, onSnapshot, addDoc, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore'
+import { collection, onSnapshot, addDoc, query, where, getDocs, deleteDoc, doc, setDoc } from 'firebase/firestore'
 import { isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut } from 'firebase/auth'
 import RideCard from './RideCard'
 import RideForm from './RideForm'
@@ -11,6 +11,7 @@ function App() {
   const [myRide, setMyRide] = useState(null)
   const [requests, setRequests] = useState([])
   const [matchedIds, setMatchedIds] = useState([])
+  const [savedMatches, setSavedMatches] = useState([])
   const [expandedSearch, setExpandedSearch] = useState(false)
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
@@ -35,16 +36,25 @@ function App() {
       setUser(firebaseUser)
       setAuthLoading(false)
       if (firebaseUser) {
-        const q = query(collection(db, 'rides'), where('userId', '==', firebaseUser.uid))
-        const snapshot = await getDocs(q)
-        if (!snapshot.empty) {
-          const docSnap = snapshot.docs[0]
+        // Restore ride
+        const rideQ = query(collection(db, 'rides'), where('userId', '==', firebaseUser.uid))
+        const rideSnap = await getDocs(rideQ)
+        if (!rideSnap.empty) {
+          const docSnap = rideSnap.docs[0]
           const ride = { id: docSnap.id, ...docSnap.data() }
           const ageHours = (new Date() - new Date(ride.createdAt)) / (1000 * 60 * 60)
           if (ageHours <= 24) setMyRide(ride)
         }
+
+        // Restore saved matches
+        const matchQ = query(collection(db, 'matches'), where('userId', '==', firebaseUser.uid))
+        const matchSnap = await getDocs(matchQ)
+        if (!matchSnap.empty) {
+          setSavedMatches(matchSnap.docs.map(d => d.data()))
+        }
       } else {
         setMyRide(null)
+        setSavedMatches([])
       }
     })
     return unsubscribe
@@ -64,14 +74,37 @@ function App() {
     return unsubscribe
   }, [])
 
+  // Detect new matches and save them
   useEffect(() => {
-    if (!myRide || requests.length === 0) return
-    requests.forEach(function(r) {
+    if (!myRide || requests.length === 0 || !user) return
+    requests.forEach(async function(r) {
       if (r.toId === myRide.id) {
         const iSentToThem = requests.some(req => req.fromId === myRide.id && req.toId === r.fromId)
         if (iSentToThem && !matchedIds.includes(r.fromId)) {
           setMatchedIds(prev => [...prev, r.fromId])
           sendNotification(r.fromName)
+
+          // Save match to Firebase
+          const matchId = `${user.uid}_${r.fromId}`
+          await setDoc(doc(db, 'matches', matchId), {
+            userId: user.uid,
+            matchedRideId: r.fromId,
+            matchedName: r.fromName,
+            matchedPhone: r.fromPhone,
+            matchedAt: new Date().toISOString()
+          })
+
+          setSavedMatches(prev => {
+            const exists = prev.some(m => m.matchedRideId === r.fromId)
+            if (exists) return prev
+            return [...prev, {
+              userId: user.uid,
+              matchedRideId: r.fromId,
+              matchedName: r.fromName,
+              matchedPhone: r.fromPhone,
+              matchedAt: new Date().toISOString()
+            }]
+          })
         }
       }
     })
@@ -134,7 +167,6 @@ function App() {
 
   const now = new Date()
 
-  // Active users in last 1 hour
   const activeUsers = rides.filter(ride => {
     if (!ride.createdAt) return false
     const ageMinutes = (now - new Date(ride.createdAt)) / (1000 * 60)
@@ -144,7 +176,6 @@ function App() {
   const requestsToMe = myRide ? requests.filter(r => r.toId === myRide.id) : []
   const mySentRequests = myRide ? requests.filter(r => r.fromId === myRide.id) : []
 
-  // Fixed time window — match based on when each person posted
   const filteredRides = rides.filter(function(ride) {
     if (!myRide) return false
     if (ride.id === myRide.id) return false
@@ -197,7 +228,6 @@ function App() {
       <h1>✈️ BLR Carpool</h1>
       <p className="subtitle">Share a cab from Bangalore Airport</p>
 
-      {/* Top bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         {activeUsers > 0 && (
           <span style={{
@@ -213,16 +243,12 @@ function App() {
             background: 'none', border: 'none', color: '#5b6af0',
             fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
             fontFamily: 'Segoe UI, sans-serif'
-          }}>
-            📤 Share
-          </button>
+          }}>📤 Share</button>
           <button onClick={() => signOut(auth)} style={{
             background: 'none', border: 'none', color: '#888',
             fontSize: '0.8rem', cursor: 'pointer',
             fontFamily: 'Segoe UI, sans-serif'
-          }}>
-            Sign out
-          </button>
+          }}>Sign out</button>
         </div>
       </div>
 
@@ -237,21 +263,40 @@ function App() {
               justifyContent: 'center', fontSize: '1rem', flexShrink: 0
             }}>✅</div>
             <div>
-              <p style={{ fontWeight: '700', color: '#1a1a2e', fontSize: '0.95rem', marginBottom: '0.1rem' }}>
-                You're listed!
-              </p>
-              <p style={{ color: '#888', fontSize: '0.82rem', marginBottom: 0 }}>
-                {myRide.name} · {myRide.destination}
-              </p>
+              <p style={{ fontWeight: '700', color: '#1a1a2e', fontSize: '0.95rem', marginBottom: '0.1rem' }}>You're listed!</p>
+              <p style={{ color: '#888', fontSize: '0.82rem', marginBottom: 0 }}>{myRide.name} · {myRide.destination}</p>
             </div>
           </div>
           <button onClick={handleCancelListing} style={{
             background: 'none', border: 'none', color: '#e53e3e',
             fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600,
-            fontFamily: 'Segoe UI, sans-serif', flexShrink: 0
-          }}>
-            Cancel
-          </button>
+            fontFamily: 'Segoe UI, sans-serif'
+          }}>Cancel</button>
+        </div>
+      )}
+
+      {/* Saved match history */}
+      {savedMatches.length > 0 && (
+        <div className="card" style={{ marginTop: '1rem', background: '#e6f9f0', border: '1.5px solid #bbf7d0' }}>
+          <p className="section-title" style={{ color: '#16a34a' }}>🎉 Your Matches</p>
+          {savedMatches.map((m, i) => (
+            <div key={i} className="match-item">
+              <div>
+                <p style={{ fontSize: '0.9rem', fontWeight: '600', color: '#1a1a2e' }}>{m.matchedName}</p>
+                <p style={{ fontSize: '0.82rem', color: '#16a34a' }}>📞 {m.matchedPhone}</p>
+              </div>
+              <button
+                onClick={() => {
+                  const msg = `Hi ${m.matchedName}! We matched on BLR Carpool ✈️ Want to share a cab?`
+                  window.open(`https://wa.me/91${m.matchedPhone}?text=${encodeURIComponent(msg)}`, '_blank')
+                }}
+                className="btn-whatsapp"
+                style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}
+              >
+                💬 WhatsApp
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -321,9 +366,7 @@ function App() {
                 {filteredRides.length} Match{filteredRides.length > 1 ? 'es' : ''} Found
               </p>
               {!expandedSearch && (
-                <button className="btn-secondary" onClick={() => setExpandedSearch(true)}>
-                  🔍 Expand
-                </button>
+                <button className="btn-secondary" onClick={() => setExpandedSearch(true)}>🔍 Expand</button>
               )}
             </div>
             {filteredRides.map(function(ride) {
