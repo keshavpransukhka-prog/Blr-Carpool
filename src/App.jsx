@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { db, auth } from './firebase'
-import { collection, onSnapshot, addDoc, query, where, getDocs, deleteDoc, doc, setDoc, updateDoc } from 'firebase/firestore'
+import { collection, onSnapshot, addDoc, query, where, getDocs, deleteDoc, doc, setDoc } from 'firebase/firestore'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import RideCard from './RideCard'
 import RideForm from './RideForm'
