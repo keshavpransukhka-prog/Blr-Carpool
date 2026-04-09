@@ -2,13 +2,12 @@ import { useState } from 'react'
 import { db } from './firebase'
 import { addDoc, collection } from 'firebase/firestore'
 
-function RideCard({ name, gender, time, destination, phone, requested, matched, onRequest, myRideId, createdAt, myGenderPref }) {
+function RideCard({ name, gender, time, destination, phone, requested, matched, onRequest, myRideId, createdAt, myGenderPref, onReport }) {
   const date = new Date(time)
   const timeStr = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
   const dateStr = date.toLocaleDateString('en-IN', { month: 'long', day: 'numeric' })
   const [feedback, setFeedback] = useState(null)
 
-  // How long ago they posted
   const minsAgo = createdAt
     ? Math.floor((new Date() - new Date(createdAt)) / (1000 * 60))
     : null
@@ -109,18 +108,19 @@ function RideCard({ name, gender, time, destination, phone, requested, matched, 
           </button>
         </div>
       )}
+
       {!matched && (
-  <button
-    onClick={onReport}
-    style={{
-      marginTop: '0.5rem', background: 'none', border: 'none',
-      color: '#ddd', fontSize: '0.75rem', cursor: 'pointer',
-      fontFamily: 'Segoe UI, sans-serif', padding: 0
-    }}
-  >
-    Report this person
-  </button>
-)}
+        <button
+          onClick={onReport}
+          style={{
+            marginTop: '0.5rem', background: 'none', border: 'none',
+            color: '#ddd', fontSize: '0.75rem', cursor: 'pointer',
+            fontFamily: 'Segoe UI, sans-serif', padding: 0
+          }}
+        >
+          Report this person
+        </button>
+      )}
     </div>
   )
 }
