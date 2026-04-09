@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { db, auth } from './firebase'
 import { collection, onSnapshot, addDoc, query, where, getDocs, deleteDoc, doc, setDoc, updateDoc } from 'firebase/firestore'
-import { isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut } from 'firebase/auth'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
 import RideCard from './RideCard'
 import RideForm from './RideForm'
 import Login from './Login'
@@ -18,21 +18,8 @@ function App() {
   const [isFirstVisit, setIsFirstVisit] = useState(false)
 
   useEffect(() => {
-    if (isSignInWithEmailLink(auth, window.location.href)) {
-      let email = window.localStorage.getItem('emailForSignIn')
-      if (!email) email = window.prompt('Please provide your email for confirmation')
-      signInWithEmailLink(auth, email, window.location.href)
-        .then(() => {
-          window.localStorage.removeItem('emailForSignIn')
-          setIsFirstVisit(true)
-          window.location.href = '/app'
-        })
-        .catch(err => console.error(err))
-    }
-  }, [])
-
-  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser && !user) setIsFirstVisit(true)
       setUser(firebaseUser)
       setAuthLoading(false)
       if (firebaseUser) {
@@ -132,7 +119,6 @@ function App() {
 
   async function handleRideSorted() {
     if (!myRide) return
-    await updateDoc(doc(db, 'rides', myRide.id), { sorted: true })
     await deleteDoc(doc(db, 'rides', myRide.id))
     setMyRide(null)
     alert('Great! Your listing has been removed. Have a safe journey! 🚕')
@@ -179,8 +165,6 @@ function App() {
 
   const requestsToMe = myRide ? requests.filter(r => r.toId === myRide.id) : []
   const mySentRequests = myRide ? requests.filter(r => r.fromId === myRide.id) : []
-
-  // Only show unmatched requests received
   const unmatchedRequestsToMe = requestsToMe.filter(r => !isMatched({ id: r.fromId }))
 
   const filteredRides = rides.filter(function(ride) {
@@ -255,7 +239,6 @@ function App() {
         </div>
       </div>
 
-      {/* Welcome message for first visit */}
       {isFirstVisit && !myRide && (
         <div className="card" style={{ background: '#eef0fe', border: '1.5px solid #c7cdf9', marginBottom: '1rem' }}>
           <p style={{ fontWeight: '700', color: '#4a59e0', marginBottom: '0.3rem' }}>👋 Welcome to BLR Carpool!</p>
@@ -299,7 +282,6 @@ function App() {
         </div>
       )}
 
-      {/* Saved matches */}
       {savedMatches.length > 0 && (
         <div className="card" style={{ marginTop: '1rem', background: '#e6f9f0', border: '1.5px solid #bbf7d0' }}>
           <p className="section-title" style={{ color: '#16a34a' }}>🎉 Your Matches</p>
@@ -322,7 +304,6 @@ function App() {
         </div>
       )}
 
-      {/* Requests sent */}
       {mySentRequests.length > 0 && (
         <div className="card" style={{ marginTop: '1rem' }}>
           <p className="section-title">📤 Requests Sent</p>
@@ -338,7 +319,6 @@ function App() {
         </div>
       )}
 
-      {/* Only unmatched requests received */}
       {unmatchedRequestsToMe.length > 0 && (
         <div className="card" style={{ marginTop: '1rem' }}>
           <p className="section-title">📥 Requests Received</p>
@@ -358,7 +338,6 @@ function App() {
         </div>
       )}
 
-      {/* Available matches */}
       <div style={{ marginTop: '1rem' }}>
         {filteredRides.length === 0 ? (
           <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>

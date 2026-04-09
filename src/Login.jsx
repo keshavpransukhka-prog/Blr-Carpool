@@ -29,8 +29,7 @@ function Login() {
       window.localStorage.setItem('emailForSignIn', email)
       setSent(true)
     } catch (err) {
-  setError(err.message)
-}
+      setError(err.message)
     }
     setLoading(false)
   }
@@ -54,7 +53,6 @@ function Login() {
 
   return (
     <div>
-      {/* Branding */}
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
         <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>✈️</div>
         <h2 style={{
