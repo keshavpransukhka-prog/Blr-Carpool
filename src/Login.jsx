@@ -1,18 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { auth } from './firebase'
-import { sendSignInLinkToEmail, onAuthStateChanged } from 'firebase/auth'
-
-const actionCodeSettings = {
-  url: 'https://blr-carpool.vercel.app/app',
-  handleCodeInApp: true,
-}
+import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from 'firebase/auth'
 
 function Login() {
-  const [email, setEmail] = useState('')
-  const [sent, setSent] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) window.location.href = '/app'
@@ -20,35 +10,14 @@ function Login() {
     return unsubscribe
   }, [])
 
-  async function handleSubmit(e) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+  async function handleGoogleSignIn() {
     try {
-      await sendSignInLinkToEmail(auth, email, actionCodeSettings)
-      window.localStorage.setItem('emailForSignIn', email)
-      setSent(true)
+      const provider = new GoogleAuthProvider()
+      await signInWithPopup(auth, provider)
     } catch (err) {
-      setError(err.message)
+      console.error(err)
+      alert('Sign in failed. Please try again.')
     }
-    setLoading(false)
-  }
-
-  if (sent) {
-    return (
-      <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
-        <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📧</div>
-        <p style={{ fontWeight: '700', color: '#1a1a2e', fontSize: '1rem', marginBottom: '0.5rem' }}>
-          Check your email!
-        </p>
-        <p style={{ color: '#888', fontSize: '0.88rem', lineHeight: '1.6' }}>
-          We sent a magic link to <strong>{email}</strong>. Click it to sign in — no password needed.
-        </p>
-        <p style={{ color: '#aaa', fontSize: '0.8rem', marginTop: '1rem' }}>
-          Didn't get it? Check your spam folder.
-        </p>
-      </div>
-    )
   }
 
   return (
@@ -64,33 +33,37 @@ function Login() {
         </p>
       </div>
 
-      <div className="card">
+      <div className="card" style={{ textAlign: 'center' }}>
         <p style={{ fontWeight: '700', color: '#1a1a2e', fontSize: '1rem', marginBottom: '0.25rem' }}>
           Sign in to continue
         </p>
-        <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
-          We'll send a magic link to your email — no password needed.
+        <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+          One tap to get started — no password needed.
         </p>
-        <form onSubmit={handleSubmit} style={{ all: 'unset', display: 'block' }}>
-          <label>Email Address</label>
-          <input
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="e.g. priya@gmail.com"
-            required
-          />
-          {error && <p className="error-text">{error}</p>}
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={loading}
-            style={{ opacity: loading ? 0.7 : 1 }}
-          >
-            {loading ? 'Sending...' : 'Send Magic Link →'}
-          </button>
-        </form>
-        <p style={{ fontSize: '0.78rem', color: '#aaa', marginTop: '1rem', textAlign: 'center' }}>
+
+        <button
+          onClick={handleGoogleSignIn}
+          style={{
+            width: '100%', padding: '0.85rem',
+            background: 'white', border: '1.5px solid #e8eaf2',
+            borderRadius: '12px', fontSize: '0.95rem', fontWeight: 600,
+            cursor: 'pointer', fontFamily: 'Segoe UI, sans-serif',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: '0.75rem', color: '#1a1a2e',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            transition: 'box-shadow 0.2s'
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 48 48">
+            <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+            <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+            <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+            <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+          </svg>
+          Continue with Google
+        </button>
+
+        <p style={{ fontSize: '0.78rem', color: '#aaa', marginTop: '1rem' }}>
           By signing in you agree to our <a href="/" style={{ color: '#5b6af0' }}>terms of use</a>
         </p>
       </div>
