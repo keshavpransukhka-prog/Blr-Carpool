@@ -18,7 +18,7 @@ const BANGALORE_AREAS = [
   { label: 'Other', value: 'Other' }
 ]
 
-function RideForm({ onRidePosted, userId }) {
+function RideForm({ onRidePosted }) {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [destination, setDestination] = useState('')
@@ -41,10 +41,10 @@ function RideForm({ onRidePosted, userId }) {
     try {
       const time = new Date().toISOString()
       const docRef = await addDoc(collection(db, 'rides'), {
-        userId, name, phone: cleanPhone, time, destination, gender, genderPref,
+        name, phone: cleanPhone, time, destination, gender, genderPref,
         createdAt: new Date().toISOString()
       })
-      onRidePosted({ id: docRef.id, userId, name, phone: cleanPhone, time, destination, gender, genderPref })
+      onRidePosted({ id: docRef.id, name, phone: cleanPhone, time, destination, gender, genderPref })
     } catch (err) {
       console.error(err)
       setError('Something went wrong. Please try again.')
